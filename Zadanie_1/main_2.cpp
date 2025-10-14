@@ -60,35 +60,16 @@ void generate_dataset(int N, int bins, const std::string& name_prefix) {
     }
     hist_file.close();
     std::cout << "Saved histogram to " << name_prefix << "_histogram.txt\n";
-
-    // Save histogram to CSV (count + percent)
-    std::ofstream csv_file("histogram_1.csv", std::ios::app);
-    if (!csv_file.is_open()) {
-        std::cout << "Error: cannot open histogram_1.csv\n";
-        return;
-    }
-    for (int i = 0; i < bins; i++) {
-        double lower = minVal + i * width;
-        double upper = lower + width;
-        double percent = (static_cast<double>(bins_count[i]) / N) * 100.0;
-        csv_file << N << "," << lower << "-" << upper << "," << bins_count[i] << "," << percent << "\n";
-    }
-    csv_file.close();
 }
 
 int main() {
-    // Add header to CSV
-    std::ofstream csv_file("histogram_1.csv");
-    csv_file << "samples,bin_range,count,percent\n";
-    csv_file.close();
-
     const int bins = 20;
 
     // Generate datasets
-    generate_dataset(10000, bins, "data_10k_1");
-    generate_dataset(100000, bins, "data_100k_1");
-    generate_dataset(1000000, bins, "data_1M_1");
+    generate_dataset(10000, bins, "data_10k_2");
+    generate_dataset(100000, bins, "data_100k_2");
+    generate_dataset(1000000, bins, "data_1M_2");
 
-    std::cout << "All datasets generated. CSV contains all histograms with count and percent.\n";
+    std::cout << "All datasets generated.\n";
     return 0;
 }
