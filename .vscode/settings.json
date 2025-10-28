@@ -53,6 +53,11 @@
         "xtr1common": "cpp",
         "xutility": "cpp",
         "numbers": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "charconv": "cpp",
+        "format": "cpp",
+        "locale": "cpp",
+        "xlocbuf": "cpp",
+        "xlocmes": "cpp"
     }
 }
