@@ -22,7 +22,7 @@ struct Config {
     double crossoverProb = 0.8;// prawdopodobieństwo krzyżowania
     double tournamentP = 0.8;  // prawdopodobieństwo zwycięstwa lepszego osobnika
     int eliteCount = 2;        // ilu najlepszych zachować
-    int T_max = 10000;         // liczba kredytów
+    int T_max = 10000;         // maksymalna liczba pokoleń
     int stagnationLimit = 50;  // liczba generacji bez poprawy przed restartem
 };
 
@@ -234,6 +234,7 @@ std::vector<double> run_GA_real(double (*objective)(const Individual&), const Co
         std::vector<double> newFitness(cfg.popSize);
         int successCount = 0;
         for (int i = 0; i < cfg.popSize; ++i) {
+            if (t >= credits) break;
             newFitness[i] = evaluate(offspring[i], objective);
             t++;
             if (newFitness[i] < fitness[i % fitness.size()]) {
