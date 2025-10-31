@@ -17,12 +17,12 @@ struct Config {
     double high = 3.0;         // górna granica
     double sigma0 = 0.1;       // początkowa wartosc sigma
     double sigma_min = 1e-4;   // minimalna wartosc sigma
-    double sigma_max = high/3;    // maksymalna wartosc sigma
+    double sigma_max = high / 3;    // maksymalna wartosc sigma
     double p_jump = 0.1;       // szansa na duży skok (Cauchy)
     double crossoverProb = 0.8;// prawdopodobieństwo krzyżowania
     double tournamentP = 0.8;  // prawdopodobieństwo zwycięstwa lepszego osobnika
     int eliteCount = 2;        // ilu najlepszych zachować
-    int T_max = 10000;         // maksymalna liczba pokoleń
+    int T_max = 10000;         // liczba kredytów
     int stagnationLimit = 50;  // liczba generacji bez poprawy przed restartem
 };
 
@@ -198,8 +198,11 @@ std::vector<double> run_GA_real(double (*objective)(const Individual&), const Co
     //Inicjalizacja populacji
     auto population = initializePopulation(cfg);
     std::vector<double> fitness(cfg.popSize);
-    for (int i = 0; i < cfg.popSize; ++i)
+    int credits = cfg.T_max;
+    for (int i = 0; i < cfg.popSize; ++i) {
         fitness[i] = evaluate(population[i], objective);
+        credits--;
+    }
 
     double sigma = cfg.sigma0;
     double bestFitness = *std::min_element(fitness.begin(), fitness.end());
@@ -207,7 +210,7 @@ std::vector<double> run_GA_real(double (*objective)(const Individual&), const Co
     int stagnationCounter = 0;
 
     //Główna pętla
-    for (int t = 0; t < cfg.T_max - 1;) {
+    for (int t = 0; t < credits;) {
 
         //Selekcja + tworzenie nowej populacji
         std::vector<Individual> offspring;
@@ -276,14 +279,6 @@ std::vector<double> run_GA_real(double (*objective)(const Individual&), const Co
             stagnationCounter = 0;
             sigma = cfg.sigma_max;
         }
-
-        //Log
-        std::cout << "Iteracja " << t
-            << "  best=" << bestFitness
-            << "  sigma=" << sigma
-            << "  success=" << successRate
-            << std::endl;
-
         history.push_back(bestFitness);
     }
 
@@ -313,6 +308,6 @@ int main() {
         for (double val : history) out_real << val << "\n";
         out_real.close();
     }
-    
+
     return 0;
 }
