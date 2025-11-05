@@ -301,6 +301,9 @@ int main() {
         for (double val : history) out_real << val << "\n";
         out_real.close();
     }
+
+    cfg.low = -32.768;
+    cfg.high = 32.768;
     for (int i = 1; i < 101; i++) {
         std::vector<double> history = run_GA_real(f2, cfg); //pierwszy argument - funkcja celu (f1 lub f2)
 
