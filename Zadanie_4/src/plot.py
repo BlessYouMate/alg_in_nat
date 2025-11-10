@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Ustawienia
-base_dir = "..\\results"
+base_dir = ".\\results"
 functions = ["f1", "f2"]
-representations = ["real"]
+representations = ["real", "bin", "gray"]
 output_dir = "plots"
 
 os.makedirs(output_dir, exist_ok=True)
