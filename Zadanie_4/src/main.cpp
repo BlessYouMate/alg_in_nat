@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <fstream>
 #include <vector>
 #include <random>
@@ -37,7 +37,7 @@ struct Config {
     double minReplaceFraction = 0.0;      // pod koniec już nic nie podmieniamy
 
 
-    double maxStepFraction = 0.5; //ograniczenie rozmiaru pojedynczego skoku
+    double maxStepFraction = 0.05; // 5% ograniczenie rozmiaru pojedynczego skoku
 
     // --- Parametry dla wersji binarnej ---
     double p_cross_binary = 0.9; // Prawdopodobieństwo krzyżowania 
@@ -216,7 +216,7 @@ Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double 
     for (int i = 0; i < cfg.dim; ++i) {
         double step;
         if (jump) {
-            step = sigma * 2.0 * randCauchy();
+            step = sigma * randCauchy(0, 0.2);
         }
         else {
             step = sigma * randNormal();
@@ -266,8 +266,8 @@ void adaptiveDiversifyPopulation(std::vector<Individual_Real>& population,
 // ADAPTACJA SIGMA (DLA WERSJI RZECZYWISTEJ)
 // ================================================================
 double adaptSigma(double sigma, double successRate, const Config& cfg) {
-    double factorUp = 1.5;
-    double factorDown = 0.82;
+    double factorUp = 1.2;
+    double factorDown = 0.9;
 
     if (successRate > 0.2)
         sigma *= factorUp;
@@ -375,7 +375,7 @@ Individual_Bin crossover_binary_one_point(const Individual_Bin& parent1, const I
 // ================================================================
 Individual_Bin crossover_binary_two_point(const Individual_Bin& parent1, const Individual_Bin& parent2, const Config& cfg) {
     Individual_Bin child(cfg.dim);
-    
+
     std::uniform_int_distribution<int> dist(0, cfg.dim - 1);
     int p1 = dist(rng);
     int p2 = dist(rng);
@@ -384,15 +384,15 @@ Individual_Bin crossover_binary_two_point(const Individual_Bin& parent1, const I
     // Geny od rodzica 1
     for (int i = 0; i < p1; ++i)
         child[i] = parent1[i];
-    
+
     // Geny od rodzica 2 (pomiędzy punktami)
     for (int i = p1; i < p2; ++i)
         child[i] = parent2[i];
-    
+
     // Geny znowu od rodzica 1
     for (int i = p2; i < cfg.dim; ++i)
         child[i] = parent1[i];
-        
+
     return child;
 }
 
@@ -401,7 +401,7 @@ Individual_Bin crossover_binary_two_point(const Individual_Bin& parent1, const I
 // ================================================================
 Individual_Bin mutate_binary(const Individual_Bin& x, const Config& cfg) {
     Individual_Bin y = x;
-    double p_mut = cfg.p_mut_binary; 
+    double p_mut = cfg.p_mut_binary;
 
     for (int i = 0; i < cfg.dim; ++i) { // Dla każdego z 10 genów 
         for (int k = 0; k < 16; ++k) { // Dla każdego z 16 bitów w genie
@@ -420,7 +420,7 @@ Individual_Bin mutate_binary(const Individual_Bin& x, const Config& cfg) {
 Individual_Bin mutate_binary_gene_reset(const Individual_Bin& x, const Config& cfg) {
     Individual_Bin y = x;
     double p_gene_mut = cfg.p_mut_gene;
-    
+
     std::uniform_int_distribution<uint16_t> dist(0, 65535);
 
     for (int i = 0; i < cfg.dim; ++i) { // Dla każdego z 10 genów (uint16_t)
@@ -490,7 +490,7 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
         credits--;
     }
 
-    double sigma = cfg.sigma0 * (cfg.high - cfg.low); // Skaluj sigmę do zakresu
+    double sigma = cfg.sigma0 * sqrt(cfg.high - cfg.low); // Skaluj sigmę do zakresu
     double bestFitness = *std::min_element(fitness.begin(), fitness.end());
     Individual_Real bestIndividual = population[std::min_element(fitness.begin(), fitness.end()) - fitness.begin()];
     int stagnationCounter = 0;
@@ -666,7 +666,7 @@ std::vector<double> run_GA_binary(double (*objective)(const Individual_Real&), C
             newFitness[i] = evaluate_binary(offspring[i], objective, cfg);
             t++;
         }
-        
+
         // W GA nie ma adaptacji sigmy
 
         //Elityzm – zachowaj najlepszych
@@ -694,7 +694,7 @@ std::vector<double> run_GA_binary(double (*objective)(const Individual_Real&), C
         }
 
         // W prostym GA nie ma restartu ani dywersyfikacji (można by dodać, ale to uproszczenie)
-        
+
         history.push_back(bestFitness);
     }
 
@@ -737,7 +737,7 @@ int main() {
         out_real.close();
     }
     std::cout << "\nZakonczono dla f1 bin" << "\n";
-    
+
     // === EKSPERYMENT 3: F1 (Gray) ===
     std::cout << "--- Uruchamianie F1 (Gray) ---" << std::endl;
     cfg.low = -3.0;
