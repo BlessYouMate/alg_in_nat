@@ -34,7 +34,7 @@ for func in functions:
         # Tworzenie wykresu
         plt.figure(figsize=(8, 5))
         plt.plot(range(min_len), avg_values, label=f"{func.upper()} - {rep.capitalize()}", linewidth=2)
-        plt.xlabel("Iteracja")
+        plt.xlabel("Wywołania głównej pętli")
         plt.ylabel("Wartość funkcji F(x)")
         plt.title(f"{func.upper()} ({rep.capitalize()} representation)")
 

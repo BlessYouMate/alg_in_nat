@@ -757,7 +757,7 @@ int main() {
     std::cout << "--- Uruchamianie F2 (Real-Valued) ---" << std::endl;
     cfg.low = -32.768;
     cfg.high = 32.768;
-    // cfg.popSize = 50;
+    cfg.popSize = 50;
     for (int i = 1; i < 101; i++) {
         std::vector<double> history = run_GA_real(f2, cfg);
         std::string filename_real = "results\\f2\\real\\results_n" + std::to_string(i) + "_run_real.txt";
@@ -767,7 +767,7 @@ int main() {
     }
     std::cout << "\nZakonczono dla f2 real" << "\n";
 
-    // cfg.popSize = 100;
+    cfg.popSize = 100;
     // === EKSPERYMENT 5: F2 (Binary) ===
     std::cout << "--- Uruchamianie F2 (Binary) ---" << std::endl;
     cfg.low = -32.768;
