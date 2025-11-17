@@ -20,12 +20,12 @@ struct Config {
     int popSize = 100;          // liczba osobników
     double low = -3.0;         // dolna granica
     double high = 3.0;         // górna granica
-    double sigma0 = 0.1;       // początkowa wartosc sigma
+    double sigma0 = 0.12;       // początkowa wartosc sigma
     double sigma_min = 1e-4;   // minimalna wartosc sigma
     double sigma_max = high / 3; // maksymalna wartosc sigma
     double p_jump = 0.1;       // szansa na duży skok (Cauchy)
     double crossoverProb = 0.8;// prawdopodobieństwo krzyżowania
-    double tournamentP = 0.8;  // prawdopodobieństwo zwycięstwa lepszego osobnika
+    double tournamentP = 0.9;  // prawdopodobieństwo zwycięstwa lepszego osobnika
     int eliteCount = 2;        // ilu najlepszych zachować
     int T_max = 10000;         // maksymalna liczba pokoleń
     int stagnationLimit = 50;  // liczba generacji bez poprawy przed restartem
@@ -33,11 +33,11 @@ struct Config {
     double restartBestFraction = 0.5;
 
     double diversityThreshold = 0.05;     // próg różnorodności (np. 5% zakresu przestrzeni)
-    double maxReplaceFraction = 0.3;      // maksymalnie 30% populacji (poza elitą) podmieniamy
+    double maxReplaceFraction = 0.2;      // maksymalnie 30% populacji (poza elitą) podmieniamy
     double minReplaceFraction = 0.0;      // pod koniec już nic nie podmieniamy
 
 
-    double maxStepFraction = 0.05; // 5% ograniczenie rozmiaru pojedynczego skoku
+    double maxStepFraction = 0.03; // 3% ograniczenie rozmiaru pojedynczego skoku
 
     // --- Parametry dla wersji binarnej ---
     double p_cross_binary = 0.9; // Prawdopodobieństwo krzyżowania 
@@ -506,8 +506,9 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
         // i dodatkowo chwilowo zwiększa się przy stagnacji, aby pomóc "wydostać się" z lokalnego minimum.
         double progress = static_cast<double>(t) / cfg.T_max; // [0, 1]
 
-        double maxStepFraction_dyn = cfg.maxStepFraction * (1.0 - 0.8 * progress);
-        double p_jump_dyn = cfg.p_jump * (1.0 - progress);
+        double decay = pow(1.0 - progress, 3.0);
+        double maxStepFraction_dyn = std::max(cfg.maxStepFraction * decay, 1e-4);
+        double p_jump_dyn = std::max(cfg.p_jump * decay, 1e-6);
 
         int baseSize = 2 + static_cast<int>(progress * 3.0); // rośnie płynnie z 2 → 5
         int bonus = std::min(2, stagnationCounter / std::max(1, cfg.stagnationLimit / 4)); // +0..2 w zależności od stagnacji
@@ -731,7 +732,7 @@ int main() {
     }
     std::cout << "\nZakonczono dla f1 real" << "\n";
 
-    // === EKSPERYMENT 2: F1 (Binary) ===
+     //=== EKSPERYMENT 2: F1 (Binary) ===
     std::cout << "--- Uruchamianie F1 (Binary) ---" << std::endl;
     cfg.low = -3.0;
     cfg.high = 3.0;
@@ -745,7 +746,7 @@ int main() {
     }
     std::cout << "\nZakonczono dla f1 bin" << "\n";
 
-    // === EKSPERYMENT 3: F1 (Gray) ===
+     //=== EKSPERYMENT 3: F1 (Gray) ===
     std::cout << "--- Uruchamianie F1 (Gray) ---" << std::endl;
     cfg.low = -3.0;
     cfg.high = 3.0;
