@@ -497,16 +497,23 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
 
     //Główna pętla
     for (int t = 0; t < credits;) {
-
         //Selekcja + tworzenie nowej populacji
         std::vector<Individual_Real> offspring;
         // --- Dynamiczna presja selekcyjna ---
         // Presja turnieju rośnie w miarę postępu optymalizacji (progress)
         // i dodatkowo chwilowo zwiększa się przy stagnacji, aby pomóc "wydostać się" z lokalnego minimum.
         double progress = static_cast<double>(t) / cfg.T_max; // [0, 1]
+
+         // shrinking mutation step
+        cfg.maxStepFraction = cfg.maxStepFraction * (1.0 - 0.8 * progress);
+
+        // diminishing jumps
+        cfg.p_jump = cfg.p_jump * (1.0 - progress);
+
         int baseSize = 2 + static_cast<int>(progress * 3.0); // rośnie płynnie z 2 → 5
         int bonus = std::min(2, stagnationCounter / std::max(1, cfg.stagnationLimit / 4)); // +0..2 w zależności od stagnacji
-        int tournamentSize = std::min(6, baseSize + bonus); // ogranicz do 6
+        double range = cfg.high - cfg.low;
+        int tournamentSize = 2 + (int)(progress * 4);
 
         // (opcjonalne logowanie do debugowania)
         /*if (t % 200 == 0) {
