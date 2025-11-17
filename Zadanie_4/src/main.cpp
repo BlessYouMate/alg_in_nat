@@ -209,9 +209,11 @@ Individual_Real crossover_real(const Individual_Real& parent1, const Individual_
 // ================================================================
 // MUTACJA (RZECZYWISTA - Gauss/Cauchy)
 // ================================================================
-Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double sigma) {
+Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double sigma,
+    double maxStepFraction, double p_jump)
+{
     Individual_Real y = x;
-    bool jump = (randUniform(0.0, 1.0) < cfg.p_jump);
+    bool jump = (randUniform(0.0, 1.0) < p_jump);
 
     for (int i = 0; i < cfg.dim; ++i) {
         double step;
@@ -222,7 +224,7 @@ Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double 
             step = sigma * randNormal();
         }
         double range = cfg.high - cfg.low;
-        double maxStep = cfg.maxStepFraction * range;
+        double maxStep = maxStepFraction * range;
         if (step > maxStep) step = maxStep;
         if (step < -maxStep) step = -maxStep;
         y[i] = reflect(x[i] + step, cfg.low, cfg.high);
@@ -504,11 +506,8 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
         // i dodatkowo chwilowo zwiększa się przy stagnacji, aby pomóc "wydostać się" z lokalnego minimum.
         double progress = static_cast<double>(t) / cfg.T_max; // [0, 1]
 
-         // shrinking mutation step
-        cfg.maxStepFraction = cfg.maxStepFraction * (1.0 - 0.8 * progress);
-
-        // diminishing jumps
-        cfg.p_jump = cfg.p_jump * (1.0 - progress);
+        double maxStepFraction_dyn = cfg.maxStepFraction * (1.0 - 0.8 * progress);
+        double p_jump_dyn = cfg.p_jump * (1.0 - progress);
 
         int baseSize = 2 + static_cast<int>(progress * 3.0); // rośnie płynnie z 2 → 5
         int bonus = std::min(2, stagnationCounter / std::max(1, cfg.stagnationLimit / 4)); // +0..2 w zależności od stagnacji
@@ -531,7 +530,7 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
                 child = crossover_real(parent1, parent2, cfg);
             }
 
-            child = mutate_real(child, cfg, sigma);
+            child = mutate_real(child, cfg, sigma, maxStepFraction_dyn, p_jump_dyn);
             offspring.push_back(child);
         }
 
@@ -588,7 +587,8 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
 
             // część wokół najlepszego osobnika
             for (int i = cfg.eliteCount; i < cfg.eliteCount + restartBestCount; ++i) {
-                population[i] = mutate_real(bestIndividual, cfg, sigma);
+                population[i] = mutate_real(population[i], cfg, sigma, maxStepFraction_dyn, p_jump_dyn);
+
             }
 
             //część losowa
