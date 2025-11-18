@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <fstream>
 #include <vector>
 #include <random>
@@ -720,7 +720,7 @@ int main() {
     Config cfg;
 
     // === EKSPERYMENT 1: F1 (Real) ===
-    std::cout << "--- Uruchamianie F1 (Real-Valued) ---" << std::endl;
+    std::cout << "Uruchamianie F1 (Real-Valued)" << std::endl;
     cfg.low = -3.0;
     cfg.high = 3.0;
     for (int i = 1; i < 101; i++) {
@@ -733,7 +733,7 @@ int main() {
     std::cout << "\nZakonczono dla f1 real" << "\n";
 
      //=== EKSPERYMENT 2: F1 (Binary) ===
-    std::cout << "--- Uruchamianie F1 (Binary) ---" << std::endl;
+    std::cout << "Uruchamianie F1 (Binary)" << std::endl;
     cfg.low = -3.0;
     cfg.high = 3.0;
     cfg.useGrayCoding = false; // Kodowanie binarne
@@ -747,7 +747,7 @@ int main() {
     std::cout << "\nZakonczono dla f1 bin" << "\n";
 
      //=== EKSPERYMENT 3: F1 (Gray) ===
-    std::cout << "--- Uruchamianie F1 (Gray) ---" << std::endl;
+    std::cout << "Uruchamianie F1 (Gray)" << std::endl;
     cfg.low = -3.0;
     cfg.high = 3.0;
     cfg.useGrayCoding = true; // Kodowanie Graya
@@ -762,7 +762,7 @@ int main() {
 
 
     // === EKSPERYMENT 4: F2 (Real) ===
-    std::cout << "--- Uruchamianie F2 (Real-Valued) ---" << std::endl;
+    std::cout << "Uruchamianie F2 (Real-Valued)" << std::endl;
     cfg.low = -32.768;
     cfg.high = 32.768;
     // cfg.popSize = 50;
@@ -777,7 +777,7 @@ int main() {
 
     // cfg.popSize = 100;
     // === EKSPERYMENT 5: F2 (Binary) ===
-    std::cout << "--- Uruchamianie F2 (Binary) ---" << std::endl;
+    std::cout << "Uruchamianie F2 (Binary)" << std::endl;
     cfg.low = -32.768;
     cfg.high = 32.768;
     cfg.useGrayCoding = false; // Kodowanie binarne
@@ -791,7 +791,7 @@ int main() {
     std::cout << "\nZakonczono dla f2 bin" << "\n";
 
     // === EKSPERYMENT 6: F2 (Gray) ===
-    std::cout << "--- Uruchamianie F2 (Gray) ---" << std::endl;
+    std::cout << "Uruchamianie F2 (Gray)" << std::endl;
     cfg.low = -32.768;
     cfg.high = 32.768;
     cfg.useGrayCoding = true; // Kodowanie Graya
