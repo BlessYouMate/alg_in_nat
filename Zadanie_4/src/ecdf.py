@@ -41,6 +41,24 @@ PATHS = {
     ]
 }
 
+# 4. Definicja progów DO WYKRESU (różne dla różnych zestawów)
+PLOT_THRESHOLDS = {
+    'binary': [
+        1.25892541179417, 0.831763771102671, 0.549540873857625, 
+        0.363078054770101, 0.239883291901949, 0.158489319246111, 
+        0.10471285480509, 0.0691830970918936, 0.0457088189614875,
+        0.0301995172040202, 0.0199526231496888, 0.0131825673855641,
+        0.0087096358995608, 0.00575439937337157, 0.00380189396320561,
+        0.00251188643150958, 0.00165958690743756
+    ],
+    'real': [
+        0.0301995172040202,
+        0.0199526231496888,
+        0.0131825673855641,
+        0.0087096358995608
+    ]
+}
+
 def generate_ecdf_data(file_groups, thresholds):
     # Wczytanie i konwersja na "Dane Surowe - Delta"
     all_delta_series = []
@@ -125,14 +143,13 @@ def generate_ecdf_data(file_groups, thresholds):
     print(" zakończono przetwarzanie")
     return (raw_delta_df, pd.DataFrame(thresholds, columns=["Progi Jakości"]), hit_time_df, ecdf_plot_df), max_iters
 
-def plot_ecdf(ecdf_data, max_iters, title, filename):
+def plot_ecdf(ecdf_data, max_iters, title, filename, thresholds_to_plot):
     print(f"  Rysuję wykres: {title}")
     
     plt.figure(figsize=(12, 8))
     
-    thresholds_to_plot = [2.884032, 1.905461, 1.258925, 0.831764, 0.549541]
-    
     for th in thresholds_to_plot:
+        # Znajdź najbliższy próg w danych
         actual_th = ecdf_data.columns[np.abs(ecdf_data.columns - th).argmin()]
     
         plt.plot(ecdf_data.index, ecdf_data[actual_th], label=rf"Próg $\Delta f \leq$ {actual_th:.1e}")
@@ -141,7 +158,8 @@ def plot_ecdf(ecdf_data, max_iters, title, filename):
     plt.xlabel("Iteracje (Generacje)", fontsize=12)
     plt.ylabel("Proporcja rozwiązanych uruchomień", fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.6)
-    plt.legend()
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # Legenda z boku, bo dla Binary jest dużo linii
+    plt.tight_layout() # Dopasowanie marginesów
     plt.ylim(-0.05, 1.05)
     plt.xlim(0, max_iters) # Użyj dynamicznego max_iters
     
@@ -150,7 +168,7 @@ def plot_ecdf(ecdf_data, max_iters, title, filename):
     plt.close()
 
 
-# --- GŁÓWNA LOGIKA SKRYPTU ---
+# GŁÓWNA LOGIKA SKRYPTU
 
 for report_type in ['binary', 'real']:
     print(f"\nPrzetwarzanie zestawu: {report_type.upper()}")
@@ -182,7 +200,11 @@ for report_type in ['binary', 'real']:
     
     # 4. Wygeneruj i zapisz wykres
     output_plot_file = os.path.join(script_dir, f"ECDF_{report_type.upper()}_Plot.png")
-    plot_ecdf(ecdf_data, detected_max_iters, f"Zestaw {report_type.upper()} (F1+F2)", output_plot_file)
+    
+    # Pobierz odpowiednie progi ze słownika PLOT_THRESHOLDS
+    my_thresholds = PLOT_THRESHOLDS[report_type]
+    
+    plot_ecdf(ecdf_data, detected_max_iters, f"Zestaw {report_type.upper()} (F1+F2)", output_plot_file, my_thresholds)
 
 
 print("\nAnaliza zakończona pomyślnie")
