@@ -17,24 +17,18 @@
 // ================================================================
 struct Config {
     int dim = 10;               // wymiar przestrzeni
-    int popSize = 100;          // liczba osobników
+    int popSizeReal = 50;          // liczba osobników w real
+    int popSizeBG = 100;          // liczba osobników w Bin?Gray
     double low = -3.0;         // dolna granica
     double high = 3.0;         // górna granica
-    double sigma0 = 0.12;       // początkowa wartosc sigma
-    double sigma_min = 1e-4;   // minimalna wartosc sigma
-    double sigma_max = high / 3; // maksymalna wartosc sigma
+    double sigma0 = 0.5;       // początkowa wartosc sigma
+    double sigma_min = 0.001;   // minimalna wartosc sigma
+    double sigma_max = 2.0; // maksymalna wartosc sigma
     double p_jump = 0.1;       // szansa na duży skok (Cauchy)
     double crossoverProb = 0.8;// prawdopodobieństwo krzyżowania
     double tournamentP = 0.9;  // prawdopodobieństwo zwycięstwa lepszego osobnika
-    int eliteCount = 2;        // ilu najlepszych zachować
     int T_max = 10000;         // maksymalna liczba pokoleń
     int stagnationLimit = 50;  // liczba generacji bez poprawy przed restartem
-    double sigma_restart_multiplier = 3;
-    double restartBestFraction = 0.5;
-
-    double diversityThreshold = 0.05;     // próg różnorodności (np. 5% zakresu przestrzeni)
-    double maxReplaceFraction = 0.2;      // maksymalnie 30% populacji (poza elitą) podmieniamy
-    double minReplaceFraction = 0.0;      // pod koniec już nic nie podmieniamy
 
 
     double maxStepFraction = 0.03; // 3% ograniczenie rozmiaru pojedynczego skoku
@@ -120,45 +114,12 @@ double reflect(double val, double low, double high) {
     return val;
 }
 
-// ================================================================
-// MIERNIK RÓŻNORODNOŚCI POPULACJI (DLA WERSJI RZECZYWISTEJ)
-// ================================================================
-double computePopulationDiversity(const std::vector<Individual_Real>& population, const Config& cfg) {
-    int n = cfg.popSize;
-    int d = cfg.dim;
-    if (n == 0) return 0.0;
-
-    // oblicz środek populacji
-    Individual_Real mean(d, 0.0);
-    for (const auto& indiv : population) {
-        for (int j = 0; j < d; ++j) {
-            mean[j] += indiv[j];
-        }
-    }
-    for (int j = 0; j < d; ++j) {
-        mean[j] /= n;
-    }
-
-    // oblicz średnią wariancję odległości od środka
-    double varSum = 0.0;
-    for (const auto& indiv : population) {
-        double distSq = 0.0;
-        for (int j = 0; j < d; ++j) {
-            double diff = indiv[j] - mean[j];
-            distSq += diff * diff;
-        }
-        varSum += sqrt(distSq);
-    }
-
-    return varSum / n; // średnia odległość osobników od środka populacji
-}
-
 
 // ================================================================
 // INICJALIZACJA POPULACJI (RZECZYWISTA)
 // ================================================================
 std::vector<Individual_Real> initializePopulation_real(const Config& cfg) {
-    std::vector<Individual_Real> population(cfg.popSize, Individual_Real(cfg.dim));
+    std::vector<Individual_Real> population(cfg.popSizeReal, Individual_Real(cfg.dim));
     for (auto& indiv : population) {
         for (int i = 0; i < cfg.dim; ++i) {
             indiv[i] = randUniform(cfg.low, cfg.high);
@@ -209,11 +170,10 @@ Individual_Real crossover_real(const Individual_Real& parent1, const Individual_
 // ================================================================
 // MUTACJA (RZECZYWISTA - Gauss/Cauchy)
 // ================================================================
-Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double sigma,
-    double maxStepFraction, double p_jump)
+Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double sigma)
 {
     Individual_Real y = x;
-    bool jump = (randUniform(0.0, 1.0) < p_jump);
+    bool jump = (randUniform(0.0, 1.0) < cfg.p_jump);
 
     for (int i = 0; i < cfg.dim; ++i) {
         double step;
@@ -224,43 +184,13 @@ Individual_Real mutate_real(const Individual_Real& x, const Config& cfg, double 
             step = sigma * randNormal();
         }
         double range = cfg.high - cfg.low;
-        double maxStep = maxStepFraction * range;
+        double maxStep = cfg.maxStepFraction * range;
         if (step > maxStep) step = maxStep;
         if (step < -maxStep) step = -maxStep;
         y[i] = reflect(x[i] + step, cfg.low, cfg.high);
     }
 
     return y;
-}
-
-
-// ================================================================
-// ROZRZUCENIE WARTOSCI (DLA WERSJI RZECZYWISTEJ)
-// ================================================================
-void adaptiveDiversifyPopulation(std::vector<Individual_Real>& population,
-    const Config& cfg,
-    double diversity,
-    double progress)
-{
-    // progress ∈ [0,1] – postęp optymalizacji
-    if (diversity > cfg.diversityThreshold)
-        return; // populacja nadal zróżnicowana – nie ruszamy
-
-    // siła dywersyfikacji maleje z czasem
-    double replaceFraction = (1.0 - progress) * cfg.maxReplaceFraction;
-    if (replaceFraction < cfg.minReplaceFraction)
-        return;
-
-    int elite = cfg.eliteCount;
-    int replaceCount = static_cast<int>((cfg.popSize - elite) * replaceFraction);
-    if (replaceCount <= 0) return;
-
-    // Wymień ostatnie replaceCount osobników na losowe punkty
-    int startIdx = cfg.popSize - replaceCount;
-    for (int i = startIdx; i < cfg.popSize; ++i) {
-        for (int j = 0; j < cfg.dim; ++j)
-            population[i][j] = randUniform(cfg.low, cfg.high);
-    }
 }
 
 
@@ -293,7 +223,7 @@ double adaptSigma(double sigma, double successRate, const Config& cfg) {
 // INICJALIZACJA POPULACJI (BINARNA)
 // ================================================================
 std::vector<Individual_Bin> initializePopulation_binary(const Config& cfg) {
-    std::vector<Individual_Bin> population(cfg.popSize, Individual_Bin(cfg.dim));
+    std::vector<Individual_Bin> population(cfg.popSizeBG, Individual_Bin(cfg.dim));
     // Dystrybucja do losowania dowolnej 16-bitowej liczby
     std::uniform_int_distribution<uint16_t> dist(0, 65535);
 
@@ -479,15 +409,13 @@ double f2(const Individual_Real& x) {
 // ================================================================
 
 std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Config cfg) {
-    // Aktualizacja sigmy na wypadek zmiany dziedziny (low/high)
-    cfg.sigma_max = (cfg.high - cfg.low) / 3.0;
 
     std::vector<double> history;
     //Inicjalizacja populacji
     auto population = initializePopulation_real(cfg);
-    std::vector<double> fitness(cfg.popSize);
+    std::vector<double> fitness(cfg.popSizeReal);
     int credits = cfg.T_max;
-    for (int i = 0; i < cfg.popSize; ++i) {
+    for (int i = 0; i < cfg.popSizeReal; ++i) {
         fitness[i] = evaluate_real(population[i], objective);
         credits--;
     }
@@ -504,16 +432,8 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
         // --- Dynamiczna presja selekcyjna ---
         // Presja turnieju rośnie w miarę postępu optymalizacji (progress)
         // i dodatkowo chwilowo zwiększa się przy stagnacji, aby pomóc "wydostać się" z lokalnego minimum.
-        double progress = static_cast<double>(t) / cfg.T_max; // [0, 1]
 
-        double decay = pow(1.0 - progress, 3.0);
-        double maxStepFraction_dyn = std::max(cfg.maxStepFraction * decay, 1e-4);
-        double p_jump_dyn = std::max(cfg.p_jump * decay, 1e-6);
-
-        int baseSize = 2 + static_cast<int>(progress * 3.0); // rośnie płynnie z 2 → 5
-        int bonus = std::min(2, stagnationCounter / std::max(1, cfg.stagnationLimit / 4)); // +0..2 w zależności od stagnacji
-        double range = cfg.high - cfg.low;
-        int tournamentSize = 2 + (int)(progress * 4);
+        int tournamentSize =tournamentSize = 4;
 
         // (opcjonalne logowanie do debugowania)
         /*if (t % 200 == 0) {
@@ -522,7 +442,7 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
                 << " tournamentSize=" << tournamentSize << "\n";
         }*/
 
-        while ((int)offspring.size() < cfg.popSize) {
+        while ((int)offspring.size() < cfg.popSizeReal) {
             Individual_Real parent1 = tournamentSelection_real(population, fitness, tournamentSize, cfg.tournamentP);
             Individual_Real parent2 = tournamentSelection_real(population, fitness, tournamentSize, cfg.tournamentP);
 
@@ -531,14 +451,14 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
                 child = crossover_real(parent1, parent2, cfg);
             }
 
-            child = mutate_real(child, cfg, sigma, maxStepFraction_dyn, p_jump_dyn);
+            child = mutate_real(child, cfg, sigma);
             offspring.push_back(child);
         }
 
         //Ewaluacja nowej populacji
-        std::vector<double> newFitness(cfg.popSize);
+        std::vector<double> newFitness(cfg.popSizeReal);
         int successCount = 0;
-        for (int i = 0; i < cfg.popSize; ++i) {
+        for (int i = 0; i < cfg.popSizeReal; ++i) {
             if (t >= credits) break;
             newFitness[i] = evaluate_real(offspring[i], objective);
             t++;
@@ -548,20 +468,20 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
         }
 
         //Adaptacja sigma (Rechenberg 1/5)
-        double successRate = (double)successCount / cfg.popSize;
+        double successRate = (double)successCount / cfg.popSizeReal;
         sigma = adaptSigma(sigma, successRate, cfg);
 
         //Elityzm – zachowaj najlepszych z poprzedniego i nowowygenerowanego pokolenia
         std::vector<std::pair<double, Individual_Real>> all;
-        for (int i = 0; i < cfg.popSize; ++i)
+        for (int i = 0; i < cfg.popSizeReal; ++i)
             all.push_back({ newFitness[i], offspring[i] });
-        for (int i = 0; i < cfg.popSize; ++i)
+        for (int i = 0; i < cfg.popSizeReal; ++i)
             all.push_back({ fitness[i], population[i] });
         std::sort(all.begin(), all.end(), [](auto& a, auto& b) { return a.first < b.first; });
 
         population.clear();
         fitness.clear();
-        for (int i = 0; i < cfg.popSize; ++i) {
+        for (int i = 0; i < cfg.popSizeReal; ++i) {
             population.push_back(all[i].second);
             fitness.push_back(all[i].first);
         }
@@ -576,38 +496,27 @@ std::vector<double> run_GA_real(double (*objective)(const Individual_Real&), Con
             stagnationCounter++;
         }
 
-        //Restart po stagnacji
+        // Restart po stagnacji
         if (stagnationCounter > cfg.stagnationLimit) {
-            //std::cout << "[INFO] Restart populacji po stagnacji.\n";
+            // Zapisz elitę
+            std::vector<double> elite = bestIndividual;
 
-            // liczba osobników tworzonych przez mutację najlepszego
-            int restartBestCount = static_cast<int>((cfg.popSize - cfg.eliteCount) * cfg.restartBestFraction);
-            if (restartBestCount < 0) restartBestCount = 0;
-            if (restartBestCount > cfg.popSize - cfg.eliteCount)
-                restartBestCount = cfg.popSize - cfg.eliteCount;
-
-            // część wokół najlepszego osobnika
-            for (int i = cfg.eliteCount; i < cfg.eliteCount + restartBestCount; ++i) {
-                population[i] = mutate_real(population[i], cfg, sigma, maxStepFraction_dyn, p_jump_dyn);
-
-            }
-
-            //część losowa
-            for (int i = cfg.eliteCount + restartBestCount; i < cfg.popSize; ++i) {
+            // Pełny restart populacji
+            for (int i = 0; i < cfg.popSizeReal; ++i) {
                 for (int j = 0; j < cfg.dim; ++j) {
                     population[i][j] = randUniform(cfg.low, cfg.high);
                 }
             }
 
-            // reset stagnacji i parametru sigma
+            // Wstaw elitę z powrotem
+            population[0] = elite;
+
+            // Reset sigma (pełne rozluźnienie eksploracji)
+            sigma = cfg.sigma_max;
+
             stagnationCounter = 0;
-            sigma *= cfg.sigma_restart_multiplier;
-            if (sigma > cfg.sigma_max) sigma = cfg.sigma_max;
         }
 
-        //rozproszeie wartości jesli populacja zbyt malo roznorodna
-        double diversity = computePopulationDiversity(population, cfg);
-        adaptiveDiversifyPopulation(population, cfg, diversity, progress);
 
         history.push_back(bestFitness);
         //if (t % 100 == 0) { // co 100 pokoleń
@@ -636,9 +545,9 @@ std::vector<double> run_GA_binary(double (*objective)(const Individual_Real&), C
     std::vector<double> history;
     //Inicjalizacja populacji
     auto population = initializePopulation_binary(cfg);
-    std::vector<double> fitness(cfg.popSize);
+    std::vector<double> fitness(cfg.popSizeBG);
     int credits = cfg.T_max;
-    for (int i = 0; i < cfg.popSize; ++i) {
+    for (int i = 0; i < cfg.popSizeBG; ++i) {
         fitness[i] = evaluate_binary(population[i], objective, cfg);
         credits--;
     }
@@ -654,7 +563,7 @@ std::vector<double> run_GA_binary(double (*objective)(const Individual_Real&), C
         double progress = static_cast<double>(t) / cfg.T_max;
         int tournamentSize = 2 + static_cast<int>(progress * 3.0); // Rośnie od 2 do 5
 
-        while ((int)offspring.size() < cfg.popSize) {
+        while ((int)offspring.size() < cfg.popSizeBG) {
             Individual_Bin parent1 = tournamentSelection_binary(population, fitness, tournamentSize, cfg.tournamentP);
             Individual_Bin parent2 = tournamentSelection_binary(population, fitness, tournamentSize, cfg.tournamentP);
 
@@ -668,8 +577,8 @@ std::vector<double> run_GA_binary(double (*objective)(const Individual_Real&), C
         }
 
         //Ewaluacja nowej populacji
-        std::vector<double> newFitness(cfg.popSize);
-        for (int i = 0; i < cfg.popSize; ++i) {
+        std::vector<double> newFitness(cfg.popSizeBG);
+        for (int i = 0; i < cfg.popSizeBG; ++i) {
             if (t >= credits) break;
             newFitness[i] = evaluate_binary(offspring[i], objective, cfg);
             t++;
@@ -679,15 +588,15 @@ std::vector<double> run_GA_binary(double (*objective)(const Individual_Real&), C
 
         //Elityzm – zachowaj najlepszych
         std::vector<std::pair<double, Individual_Bin>> all;
-        for (int i = 0; i < cfg.popSize; ++i)
+        for (int i = 0; i < cfg.popSizeBG; ++i)
             all.push_back({ newFitness[i], offspring[i] });
-        for (int i = 0; i < cfg.popSize; ++i)
+        for (int i = 0; i < cfg.popSizeBG; ++i)
             all.push_back({ fitness[i], population[i] });
         std::sort(all.begin(), all.end(), [](auto& a, auto& b) { return a.first < b.first; });
 
         population.clear();
         fitness.clear();
-        for (int i = 0; i < cfg.popSize; ++i) {
+        for (int i = 0; i < cfg.popSizeBG; ++i) {
             population.push_back(all[i].second);
             fitness.push_back(all[i].first);
         }
@@ -775,7 +684,6 @@ int main() {
     }
     std::cout << "\nZakonczono dla f2 real" << "\n";
 
-    // cfg.popSize = 100;
     // === EKSPERYMENT 5: F2 (Binary) ===
     std::cout << "Uruchamianie F2 (Binary)" << std::endl;
     cfg.low = -32.768;
