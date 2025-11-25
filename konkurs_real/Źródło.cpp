@@ -29,14 +29,6 @@ dodatkowe rozwiazania spoza wykladu:
       Zakladamy, øe jeúli ma≥a populacja zawiod≥a, to naleøy zrestartowaÊ algorytm z wiÍkszπ populacjπ, aby zwiÍkszyc szansÍ na globalnπ zbieønoúÊ.
       Zrodlo: Auger, A., & Hansen, N. (2005). A restart CMA evolution strategy with increasing population size. 2005 IEEE Congress on Evolutionary Computation.
 
-    - Inicjalizacja na KrawÍdziach - Zaimplementowana aby uciec z naturalnego bardzo szybkiego dπøenia do zera,
-      przy stosowaniu centroidu w funckjach o wielu wymiarach. Zgodnie z literatura, w wysokich wymiarach objÍtoúÊ hiperkostki skupia siÍ przy krawÍdziach.
-      Losowanie jednostajne (np w [-10, 10]) i tak statystycznie umieszcza punkty daleko od úrodka,
-      ale uúrednianie (centroida) úciπga je do zera,
-      bo ich wektor úredni to úrdoek dziedziny (0 w przyapdku symetrycznej dziedziny) - Zgodnie z Prawem Wielkich Liczb
-      Inicjalizacja brzegowa jest sposobem na opÛünienie tego procesu i wymuszenie d≥uøszego czasu eksploracji.
-      Liczymy, øe po dordze wpadniemy w minimum globalne - jeúli nie ma go w centrum. W przeciwnym wypadku i tak do niego dπøymy.
-
       èrÛd≥o: Eshelman, L. J., & Schaffer, J. D. (1993). "Real-coded genetic algorithms and interval-schemata". W Foundations of Genetic Algorithms.
       Heurystyka stosowana w Benchmarkach Optymalizacyjnych (np. BBOB/COCO) oraz w analizie problemÛw wysokowymiarowych.
 
@@ -143,7 +135,7 @@ void mutate_with_momentum(Individual& ind, const std::vector<double>& momentum, 
     for (int d = 0; d < cfg.dim; ++d) {
         double localNoise = randNormal(0.0, 1.0);
 
-        // Adaptacja Sigmy z wektorem teth - inspirowane wykladem
+        // Adaptacja Sigmy z learning rate - inspirowane wykladem
         ind.sigma[d] = ind.sigma[d] * std::exp(cfg.tau_prime * globalNoise + cfg.tau * localNoise);
         if (ind.sigma[d] < cfg.sigma_min) ind.sigma[d] = cfg.sigma_min;
         if (ind.sigma[d] > cfg.sigma_max) ind.sigma[d] = cfg.sigma_max;
@@ -157,6 +149,7 @@ void mutate_with_momentum(Individual& ind, const std::vector<double>& momentum, 
     enforceConstraints(ind, cfg.low, cfg.high);
 }
 
+//funckja wykorzystywana jedynie do testow
 void analyzeResult(const std::vector<double>& bestX) {
     std::cout << "\n=== FINAL ANALYSIS ===\n";
     double distToOpt = 0.0;
@@ -187,9 +180,11 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
 
     while (credits > 0) {
         // Restart IPOP - w tej czesci kodu jestesmy tylko na poczatku petli i przy restartach
-        if (restartCount > 0) {
+        if (cfg.lambda >= cfg.max_lambda) {
+            cfg.lambda = cfg.lambda + int(4 * std::log((double)cfg.dim));
+        }
+        else {
             cfg.lambda = (int)(cfg.lambda * 1.5);
-            if (cfg.lambda > cfg.max_lambda) cfg.lambda = cfg.lambda + int(4 * std::log((double)cfg.dim));
         }
 
         // Selekcja (mu, lambda)
@@ -201,24 +196,19 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
         for (int i = 0; i < cfg.mu; ++i) { weights[i] = std::log(cfg.mu + 0.5) - std::log(i + 1.0); sum_w += weights[i]; }
         for (int i = 0; i < cfg.mu; ++i) weights[i] /= sum_w;
 
-        // INICJALIZACJA "NA BANDZIE" (EDGE INIT)
-        // Losujemy centrum startowe DALEKO od zera - poprzez zostawienie dziury w srodku
-        std::vector<double> startCenter(cfg.dim);
-        for (int d = 0; d < cfg.dim; ++d) {
-            if (randUniform(0, 1) < 0.5) startCenter[d] = randUniform(cfg.low, cfg.low / 2.0);
-            else startCenter[d] = randUniform(cfg.high / 2.0, cfg.high);
-        }
-
+        //Inicjalizacja
+        // Kaødy osobnik jest losowany niezaleønie 
         std::vector<Individual> population(cfg.mu);
 
         for (int i = 0; i < cfg.mu; ++i) {
             population[i].x.resize(cfg.dim);
             population[i].sigma.resize(cfg.dim);
             for (int d = 0; d < cfg.dim; ++d) {
-                population[i].x[d] = startCenter[d] + randNormal(0.0, cfg.startSigma);
+                population[i].x[d] = randUniform(cfg.low, cfg.high);
+
                 population[i].sigma[d] = cfg.startSigma;
             }
-            enforceConstraints(population[i], cfg.low, cfg.high);
+
             evaluate(population[i], objective, credits);
 
             if (population[i].fitness < bestFitnessEver) {
@@ -227,6 +217,7 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
             }
             if (credits <= 0) break;
         }
+        if (credits <= 0) break;
 
         //logging do testow
         //std::cout << ">> RESTART " << restartCount << " (Lam: " << cfg.lambda << ") Edge-Start. Cr: " << credits << "\n";
@@ -249,7 +240,7 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
             for (int d = 0; d < cfg.dim; ++d) {
                 // Wyg≥adzanie wyk≥adnicze pÍdu
                 double move = currentCentroid.x[d] - prevCentroid.x[d];
-                momentum[d] = (1.0 - 0.5) * momentum[d] + 0.5 * move;
+                momentum[d] = (1.0 - cfg.momentum_beta) * momentum[d] + cfg.momentum_beta * move;
             }
             prevCentroid = currentCentroid; // Zapis dla nastÍpnego krok
 
@@ -259,7 +250,7 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
 
             for (int k = 0; k < cfg.lambda; ++k) {
                 Individual child = currentCentroid; //centroid
-                mutate_with_momentum(child, momentum, cfg); //pÍd!
+                mutate_with_momentum(child, momentum, cfg); //pÍd
                 evaluate(child, objective, credits);
                 offspring.push_back(child);
                 if (credits <= 0) break;
@@ -335,7 +326,6 @@ double f_salomon(const std::vector<double>& x) {
 int main() {
     std::vector<int> dims = { 5, 15, 30 };
     int runs = 100; // Liczba uruchomieÒ na konfiguracjÍ
-    // 1. WHITLEY
     for (int n : dims) {
         Config cfg;
         cfg.dim = n;
@@ -361,34 +351,6 @@ int main() {
 
         std::string dir = "results/whitley/n" + std::to_string(n);
         fs::create_directories(dir);
-
-        cfg.high = 30;
-        cfg.low = -30;
-        cfg.dim = n;
-        cfg.T_max = 10000 * n;
-        cfg.tau = 1.0 / std::sqrt(2.0 * std::sqrt((double)cfg.dim));
-        cfg.tau_prime = 1.0 / std::sqrt(2.0 * (double)cfg.dim);
-        
-        cfg.sigma_max = 20;
-        
-        cfg.startSigma = 10;
-        
-        if (n == 30) {
-            cfg.lambda = 80;
-            cfg.momentum_beta = 0.9;
-            cfg.max_lambda = 300;
-        }
-        else if (n == 5) {
-            cfg.lambda = 20;
-            cfg.momentum_beta = 0.6;
-            cfg.max_lambda = 100;
-        
-        }
-        else {
-            cfg.lambda = 40;
-            cfg.momentum_beta = 0.8;
-            cfg.max_lambda = 200;
-        }
         int counter = 0;
         for (int r = 1; r <= runs; ++r) {
             auto history = run_Momentum_ES(f_whitley, cfg);
@@ -404,19 +366,64 @@ int main() {
         counter = 0;
         dir = "results/rosenbrock/n" + std::to_string(n);
 
+        cfg.high = 30;
+        cfg.low = -30;
+        cfg.dim = n;
+        cfg.T_max = 10000 * n;
+        cfg.tau = 1.0 / std::sqrt(2.0 * std::sqrt((double)cfg.dim));
+        cfg.tau_prime = 1.0 / std::sqrt(2.0 * (double)cfg.dim);
+
+        cfg.sigma_max = 20;
+
+        cfg.startSigma = 10;
+
+        if (n == 30) {
+            cfg.lambda = 80;
+            cfg.momentum_beta = 0.9;
+            cfg.stagnationLimit = 400;
+            cfg.max_lambda = 500;
+        }
+        else if (n == 5) {
+            cfg.lambda = 20;
+            cfg.momentum_beta = 0.6;
+            cfg.stagnationLimit = 200;
+            cfg.max_lambda = 100;
+
+        }
+        else {
+            cfg.lambda = 40;
+            cfg.momentum_beta = 0.8;
+            cfg.stagnationLimit = 200;
+            cfg.max_lambda = 300;
+        }
+
+        
+        fs::create_directories(dir);
+        for (int r = 1; r <= runs; ++r) {
+            auto history = run_Momentum_ES(f_rosenbrock, cfg);
+            std::ofstream out(dir + "/run_" + std::to_string(r) + ".txt");
+            for (double val : history) out << val << "\n";
+            if (r % 10 == 0) std::cout << ".";
+            if (history.back() > -1 && history.back() < 1) counter++;
+        }
+        std::cout << "number of good scores: " << counter << "\n";
+        std::cout << " Done.\n";
+        
+        std::cout << ">>> Processing Salomon " << n << "D...\n";
+
         cfg.high = 100;
         cfg.low = -100;
         cfg.dim = n;
         cfg.T_max = 10000 * n;
         cfg.tau = 1.0 / std::sqrt(2.0 * std::sqrt((double)cfg.dim));
         cfg.tau_prime = 1.0 / std::sqrt(2.0 * (double)cfg.dim);
-        
+
         cfg.sigma_max = 50;
-        
+
         cfg.startSigma = 20;
-        
+
         cfg.stagnationLimit = 100;
-        
+
         if (n == 30) {
             cfg.lambda = 120;
             cfg.momentum_beta = 0.5;
@@ -435,18 +442,7 @@ int main() {
             cfg.max_lambda = 200;
             cfg.stagnationLimit = 100;
         }
-        fs::create_directories(dir);
-        for (int r = 1; r <= runs; ++r) {
-            auto history = run_Momentum_ES(f_rosenbrock, cfg);
-            std::ofstream out(dir + "/run_" + std::to_string(r) + ".txt");
-            for (double val : history) out << val << "\n";
-            if (r % 10 == 0) std::cout << ".";
-            if (history.back() > -1 && history.back() < 1) counter++;
-        }
-        std::cout << "number of good scores: " << counter << "\n";
-        std::cout << " Done.\n";
-        
-        std::cout << ">>> Processing Salomon " << n << "D...\n";
+
         counter = 0;
         dir = "results/salomon/n" + std::to_string(n);
         fs::create_directories(dir);
