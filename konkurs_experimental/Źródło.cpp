@@ -340,6 +340,8 @@ int main() {
         cfg.tau_prime = 1.0 / std::sqrt(2.0 * (double)cfg.dim);
         
         cfg.startSigma = 2.5;
+
+        cfg.max_lambda = cfg.T_max * 0.02;
         
         if (n == 30) {
             cfg.lambda = 60;
@@ -385,22 +387,19 @@ int main() {
 
         if (n == 30) {
             cfg.lambda = 80;
-            cfg.momentum_beta = 0.9;
+            cfg.momentum_beta = 0.8;
             cfg.stagnationLimit = 400;
-            cfg.max_lambda = 500;
         }
         else if (n == 5) {
             cfg.lambda = 20;
             cfg.momentum_beta = 0.6;
             cfg.stagnationLimit = 200;
-            cfg.max_lambda = 100;
 
         }
         else {
             cfg.lambda = 40;
-            cfg.momentum_beta = 0.8;
+            cfg.momentum_beta = 0.7;
             cfg.stagnationLimit = 200;
-            cfg.max_lambda = 300;
         }
 
         
@@ -432,20 +431,17 @@ int main() {
 
         if (n == 30) {
             cfg.lambda = 120;
-            cfg.momentum_beta = 0.5;
-            cfg.max_lambda = 500;
+            cfg.momentum_beta = 0.7;
             cfg.stagnationLimit = 200;
         }
         else if (n == 5) {
             cfg.lambda = 20;
-            cfg.momentum_beta = 0.6;
-            cfg.max_lambda = 100;
+            cfg.momentum_beta = 0.5;
             cfg.stagnationLimit = 100;
         }
         else {
             cfg.lambda = 40;
-            cfg.momentum_beta = 0.7;
-            cfg.max_lambda = 200;
+            cfg.momentum_beta = 0.6;
             cfg.stagnationLimit = 100;
         }
 
