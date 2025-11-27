@@ -29,7 +29,7 @@ dodatkowe rozwiazania spoza wykladu:
       Zakladamy, ze jesli mala populacja zawiodla, to nalezy zrestartowac algorytm z wieksza populacja, aby zwiekszyc szanse na globalne zbieznosc.
       Zrodlo: Auger, A., & Hansen, N. (2005). A restart CMA evolution strategy with increasing population size. 2005 IEEE Congress on Evolutionary Computation.
 
-    - Zatrzymanie wzrostu lambdy gdy stanie sie zbyt duza - pomysl autorksi
+    - ZSpowolenienie wzrostu lambdy gdy stanie sie zbyt duza - pomysl autorksi
 */
 
 namespace fs = std::filesystem;
