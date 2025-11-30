@@ -11,7 +11,7 @@
 #include <fstream>
 
 /*
-Strategia Ewolucyjna 
+Strategia Ewolucyjna
 zaimplementowane rozwiazania z wykladu:
     - selekcja (lambda, mu) - wymienamy cale stare pokolenie na nowe
     - mutacja przy uzyciu wektora sigm dla kazdego wymiaru
@@ -25,7 +25,7 @@ dodatkowe rozwiazania spoza wykladu:
       Jest to uproszczona implementacja koncepcji Evolution Path z algorytmu CMA-ES (Covariance Matrix Adaptation Evolution Strategy).
       Zrodlo: Hansen, N., & Ostermeier, A. (2001). Completely Derandomized Self-Adaptation in Evolution Strategies. Evolutionary Computation, 9(2), 159-195.
 
-    - Strategia Restartow IPOP (Increasing Population) - Gdy algorytm utknie, nastepuje restart ze zwiekszona populacja. 
+    - Strategia Restartow IPOP (Increasing Population) - Gdy algorytm utknie, nastepuje restart ze zwiekszona populacja.
       Zakladamy, ze jesli mala populacja zawiodla, to nalezy zrestartowac algorytm z wieksza populacja, aby zwiekszyc szanse na globalne zbieznosc.
       Zrodlo: Auger, A., & Hansen, N. (2005). A restart CMA evolution strategy with increasing population size. 2005 IEEE Congress on Evolutionary Computation.
 
@@ -202,6 +202,8 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
         }
         if (credits <= 0) break;
 
+        std::sort(population.begin(), population.end(), [](const auto& a, const auto& b) { return a.fitness < b.fitness; });
+
         //logging do testow
         //std::cout << ">> RESTART " << restartCount << " (Lam: " << cfg.lambda << ") Edge-Start. Cr: " << credits << "\n";
 
@@ -256,7 +258,7 @@ std::vector<double> run_Momentum_ES(double (*objective)(const std::vector<double
             double avgSigma = 0.0;
             for (const auto& ind : population) for (double s : ind.sigma) avgSigma += s;
             avgSigma /= (cfg.dim * cfg.mu);
-            
+
             if (avgSigma < 1e-4) break;// zbyt mala srednia sigma- utkenlismy
 
             //Zliczanie Stagnacji
@@ -313,20 +315,24 @@ int main() {
         cfg.T_max = 10000 * n;
         cfg.tau = 1.0 / std::sqrt(2.0 * std::sqrt((double)cfg.dim));
         cfg.tau_prime = 1.0 / std::sqrt(2.0 * (double)cfg.dim);
-        
+
         cfg.startSigma = 2.5;
-        
+
         if (n == 30) {
-            cfg.lambda = 60;
+            cfg.startSigma = 2.5;
+            cfg.sigma_min = 1e-6;
+            cfg.lambda = 50;
             cfg.momentum_beta = 0.9;
+            cfg.stagnationLimit = 50;
         }
         else if (n == 5) {
             cfg.lambda = 8;
             cfg.momentum_beta = 0.6;
         }
         else {
-            cfg.lambda = 20;
-            cfg.momentum_beta = 0.75;
+            cfg.startSigma = 5;
+            cfg.lambda = 25;
+            cfg.momentum_beta = 0.9;
         }
         std::cout << ">>> Processing Whitley " << n << "D...\n";
 
@@ -338,9 +344,9 @@ int main() {
             std::ofstream out(dir + "/run_" + std::to_string(r) + ".txt");
             for (double val : history) out << val << "\n";
             if (r % 10 == 0) std::cout << ".";
-            if (history.back() > -1 && history.back() < 1) counter++;
+            if (history.back() > -10 && history.back() < 10) counter++;
         }
-        std::cout << "number of good scores: "<<counter<<"\n";
+        std::cout << "number of good scores: " << counter << "\n";
         std::cout << " Done.\n";
 
         std::cout << ">>> Processing Rosenbrock " << n << "D...\n";
@@ -378,7 +384,7 @@ int main() {
             cfg.max_lambda = 300;
         }
 
-        
+
         fs::create_directories(dir);
         for (int r = 1; r <= runs; ++r) {
             auto history = run_Momentum_ES(f_rosenbrock, cfg);
@@ -389,7 +395,7 @@ int main() {
         }
         std::cout << "number of good scores: " << counter << "\n";
         std::cout << " Done.\n";
-        
+
         std::cout << ">>> Processing Salomon " << n << "D...\n";
 
         cfg.high = 100;
