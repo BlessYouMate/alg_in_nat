@@ -1,5 +1,0 @@
-Number of points: 100000
-Points inside the circle: 34840
-Estimated area of the circle: 3.1356
-Exact area (pi*r^2): 3.14159
-Relative error: 0.190752 %
