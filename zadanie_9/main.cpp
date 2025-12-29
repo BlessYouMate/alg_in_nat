@@ -167,38 +167,19 @@ int tournament_selection(const std::vector<Individual>& pop) {
     return idx2;
 }
 
-// Krzyżowanie SBX 
-void sbx_crossover(const Individual& p1, const Individual& p2, Individual& c1, Individual& c2) {
+// Proste krzyżowanie arytmetyczne
+void arithmetic_crossover(const Individual& p1, const Individual& p2, Individual& c1, Individual& c2) {
     if (dis(gen) <= CROSSOVER_PROB) {
+        // Losujemy wagę alfa od 0 do 1 (np. 0.4 oznacza wzięcie 40% cech p1 i 60% p2)
+        double alpha = dis(gen); 
+
         for (int i = 0; i < NUM_VARIABLES; ++i) {
-            if (dis(gen) <= 0.5) {
-                if (std::abs(p1.variables[i] - p2.variables[i]) > 1e-14) {
-                    double y1 = std::min(p1.variables[i], p2.variables[i]);
-                    double y2 = std::max(p1.variables[i], p2.variables[i]);
-                    double rand = dis(gen);
-                    double beta = 1.0 + (2.0 * (y1 - 0.0) / (y2 - y1));
-                    double alpha = 2.0 - std::pow(beta, -(ETA_C + 1.0));
-                    
-                    double betaq;
-                    if (rand <= (1.0 / alpha)) {
-                        betaq = std::pow(rand * alpha, (1.0 / (ETA_C + 1.0)));
-                    } else {
-                        betaq = std::pow(1.0 / (2.0 - rand * alpha), (1.0 / (ETA_C + 1.0)));
-                    }
-                    
-                    c1.variables[i] = 0.5 * ((y1 + y2) - betaq * (y2 - y1));
-                    c2.variables[i] = 0.5 * ((y1 + y2) + betaq * (y2 - y1));
-                } else {
-                    c1.variables[i] = p1.variables[i];
-                    c2.variables[i] = p2.variables[i];
-                }
-            } else {
-                c1.variables[i] = p1.variables[i];
-                c2.variables[i] = p2.variables[i];
-            }
-            // Ograniczenia
-            c1.variables[i] = std::max(0.0, std::min(1.0, c1.variables[i]));
-            c2.variables[i] = std::max(0.0, std::min(1.0, c2.variables[i]));
+            // Wzór: Dziecko = alpha * Rodzic1 + (1 - alpha) * Rodzic2
+            c1.variables[i] = alpha * p1.variables[i] + (1.0 - alpha) * p2.variables[i];
+            c2.variables[i] = (1.0 - alpha) * p1.variables[i] + alpha * p2.variables[i];
+            
+            // Ograniczenia nie są tu potrzebne, bo średnia z liczb [0,1] zawsze jest w [0,1],
+            // ale dla bezpieczeństwa można zostawić.
         }
     } else {
         c1 = p1;
@@ -206,30 +187,20 @@ void sbx_crossover(const Individual& p1, const Individual& p2, Individual& c1, I
     }
 }
 
-// Mutacja wielomianowa 
-void polynomial_mutation(Individual& ind) {
+// Mutacja Gaussowska (Gaussian Mutation)
+void gaussian_mutation(Individual& ind) {
+    // Sigma to odchylenie standardowe - określa "szerokość" zmian
+    // 0.1 to bezpieczna wartość startowa dla zakresu [0,1]
+    double sigma = 0.1; 
+    std::normal_distribution<> d(0, sigma); // Generator rozkładu normalnego
+
     for (int i = 0; i < NUM_VARIABLES; ++i) {
         if (dis(gen) <= MUTATION_PROB) {
-            double y = ind.variables[i];
-            double yl = 0.0;
-            double yu = 1.0;
-            double delta1 = (y - yl) / (yu - yl);
-            double delta2 = (yu - y) / (yu - yl);
-            double rnd = dis(gen);
-            double mut_pow = 1.0 / (ETA_M + 1.0);
-            double deltaq;
+            // Dodajemy losową wartość z rozkładu Gaussa
+            ind.variables[i] += d(gen);
 
-            if (rnd <= 0.5) {
-                double xy = 1.0 - delta1;
-                double val = 2.0 * rnd + (1.0 - 2.0 * rnd) * (std::pow(xy, (ETA_M + 1.0)));
-                deltaq = std::pow(val, mut_pow) - 1.0;
-            } else {
-                double xy = 1.0 - delta2;
-                double val = 2.0 * (1.0 - rnd) + 2.0 * (rnd - 0.5) * (std::pow(xy, (ETA_M + 1.0)));
-                deltaq = 1.0 - std::pow(val, mut_pow);
-            }
-            ind.variables[i] = y + deltaq * (yu - yl);
-            ind.variables[i] = std::max(yl, std::min(yu, ind.variables[i]));
+            // Pilnujemy zakresu [0, 1]
+            ind.variables[i] = std::max(0.0, std::min(1.0, ind.variables[i]));
         }
     }
 }
@@ -250,9 +221,9 @@ int main() {
             int p2_idx = tournament_selection(population);
             
             Individual c1, c2;
-            sbx_crossover(population[p1_idx], population[p2_idx], c1, c2);
-            polynomial_mutation(c1);
-            polynomial_mutation(c2);
+            arithmetic_crossover(population[p1_idx], population[p2_idx], c1, c2);
+            gaussian_mutation(c1);
+            gaussian_mutation(c2);
             
             evaluate_zdt1(c1);
             evaluate_zdt1(c2);
