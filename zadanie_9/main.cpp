@@ -7,8 +7,8 @@
 #include <limits>
 #include <iomanip>
 
-// Parametry problemu i algorytmu
-const int NUM_VARIABLES = 30;   // Zgodnie z definicją ZDT1 [cite: 4058]
+// Parametry algorytmu
+const int NUM_VARIABLES = 30;   
 const int NUM_OBJECTIVES = 2;
 const int POPULATION_SIZE = 100;
 const int MAX_EVALUATIONS = 20000;
@@ -33,7 +33,6 @@ struct Individual {
     Individual() : variables(NUM_VARIABLES), objectives(NUM_OBJECTIVES), rank(0), crowding_distance(0.0), domination_count(0) {}
 };
 
-// Funkcja ZDT1 [cite: 4058]
 void evaluate_zdt1(Individual& ind) {
     double f1 = ind.variables[0];
     
@@ -62,7 +61,7 @@ std::vector<Individual> initialize_population() {
     return pop;
 }
 
-// Sprawdzenie dominacji: czy ind1 dominuje ind2?
+// Sprawdzenie dominacji
 bool dominates(const Individual& ind1, const Individual& ind2) {
     bool at_least_one_better = false;
     for (int i = 0; i < NUM_OBJECTIVES; ++i) {
@@ -76,7 +75,7 @@ bool dominates(const Individual& ind1, const Individual& ind2) {
     return at_least_one_better;
 }
 
-// Szybkie sortowanie niedominowane [cite: 3237]
+// Szybkie sortowanie niedominowane
 std::vector<std::vector<int>> fast_non_dominated_sort(std::vector<Individual>& population) {
     std::vector<std::vector<int>> fronts;
     std::vector<int> first_front;
@@ -120,7 +119,7 @@ std::vector<std::vector<int>> fast_non_dominated_sort(std::vector<Individual>& p
     return fronts;
 }
 
-// Obliczanie odległości tłoku (Crowding Distance) [cite: 3317]
+// Obliczanie odległości tłoku (Crowding Distance)
 void calculate_crowding_distance(std::vector<Individual>& population, const std::vector<int>& front) {
     int l = front.size();
     if (l == 0) return;
@@ -177,9 +176,6 @@ void arithmetic_crossover(const Individual& p1, const Individual& p2, Individual
             // Wzór: Dziecko = alpha * Rodzic1 + (1 - alpha) * Rodzic2
             c1.variables[i] = alpha * p1.variables[i] + (1.0 - alpha) * p2.variables[i];
             c2.variables[i] = (1.0 - alpha) * p1.variables[i] + alpha * p2.variables[i];
-            
-            // Ograniczenia nie są tu potrzebne, bo średnia z liczb [0,1] zawsze jest w [0,1],
-            // ale dla bezpieczeństwa można zostawić.
         }
     } else {
         c1 = p1;
@@ -187,19 +183,14 @@ void arithmetic_crossover(const Individual& p1, const Individual& p2, Individual
     }
 }
 
-// Mutacja Gaussowska (Gaussian Mutation)
+// Mutacja Gaussowska 
 void gaussian_mutation(Individual& ind) {
-    // Sigma to odchylenie standardowe - określa "szerokość" zmian
-    // 0.1 to bezpieczna wartość startowa dla zakresu [0,1]
     double sigma = 0.1; 
-    std::normal_distribution<> d(0, sigma); // Generator rozkładu normalnego
+    std::normal_distribution<> d(0, sigma);
 
     for (int i = 0; i < NUM_VARIABLES; ++i) {
         if (dis(gen) <= MUTATION_PROB) {
-            // Dodajemy losową wartość z rozkładu Gaussa
             ind.variables[i] += d(gen);
-
-            // Pilnujemy zakresu [0, 1]
             ind.variables[i] = std::max(0.0, std::min(1.0, ind.variables[i]));
         }
     }
@@ -233,14 +224,14 @@ int main() {
             evaluations += 2;
         }
 
-        // Krok 3: Łączenie populacji (Rt = Pt + Qt) [cite: 3333]
+        // Krok 3: Łączenie populacji (Rt = Pt + Qt)
         std::vector<Individual> R_t = population;
         R_t.insert(R_t.end(), offspring.begin(), offspring.end());
 
-        // Krok 4: Sortowanie niedominowane połączonej populacji [cite: 3334]
+        // Krok 4: Sortowanie niedominowane połączonej populacji
         auto fronts = fast_non_dominated_sort(R_t);
 
-        // Krok 5: Tworzenie nowej populacji Pt+1 [cite: 3337]
+        // Krok 5: Tworzenie nowej populacji Pt+1
         std::vector<Individual> next_population;
         int i = 0;
         while (next_population.size() + fronts[i].size() <= POPULATION_SIZE) {
@@ -252,7 +243,7 @@ int main() {
             if (i >= fronts.size()) break;
         }
 
-        // Dopełnianie populacji z ostatniego frontu (sortowanie po crowding distance) [cite: 3343]
+        // Dopełnianie populacji z ostatniego frontu (sortowanie po crowding distance)
         if (next_population.size() < POPULATION_SIZE && i < fronts.size()) {
             calculate_crowding_distance(R_t, fronts[i]);
             
@@ -270,7 +261,7 @@ int main() {
         population = next_population;
     }
 
-    // Zapis wyników do pliku (tylko pierwszy front - rozwiązania Pareto optymalne)
+    // Zapis wyników do pliku (tylko pierwszy front)
     auto fronts = fast_non_dominated_sort(population);
     std::ofstream outfile("zdt1_results.csv");
     outfile << "f1,f2\n";
@@ -279,7 +270,7 @@ int main() {
     }
     outfile.close();
 
-    std::cout << "Zakonczono. Wyniki zapisano w 'zdt1_results.csv'. Uzuj skryptu Python do wizualizacji." << std::endl;
+    std::cout << "Zakonczono. Wyniki zapisano w 'zdt1_results.csv'" << std::endl;
 
     return 0;
 }
