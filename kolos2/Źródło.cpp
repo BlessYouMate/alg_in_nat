@@ -66,7 +66,7 @@ void evaluate_zdt(Individual& ind) {
     int m = current_config.num_variables;
     double f1, g, h;
 
-    // --- ZDT1  ---
+    // ZDT1
     if (current_config.type == ZDT1) {
         f1 = ind.variables[0];
         double sum = 0.0;
@@ -76,7 +76,7 @@ void evaluate_zdt(Individual& ind) {
         ind.objectives[0] = f1;
         ind.objectives[1] = g * h;
     }
-    // --- ZDT2 ---
+    // ZDT2
     else if (current_config.type == ZDT2) {
         f1 = ind.variables[0];
         double sum = 0.0;
@@ -86,7 +86,7 @@ void evaluate_zdt(Individual& ind) {
         ind.objectives[0] = f1;
         ind.objectives[1] = g * h;
     }
-    // --- ZDT3 ---
+    // ZDT3
     else if (current_config.type == ZDT3) {
         f1 = ind.variables[0];
         double sum = 0.0;
@@ -96,7 +96,7 @@ void evaluate_zdt(Individual& ind) {
         ind.objectives[0] = f1;
         ind.objectives[1] = g * h;
     }
-    // --- ZDT4 ---
+    // ZDT4
     else if (current_config.type == ZDT4) {
         f1 = ind.variables[0];
         double sum = 0.0;
@@ -108,7 +108,7 @@ void evaluate_zdt(Individual& ind) {
         ind.objectives[0] = f1;
         ind.objectives[1] = g * h;
     }
-    // --- ZDT6 ---
+    // ZDT6
     else if (current_config.type == ZDT6) {
         f1 = 1.0 - std::exp(-4.0 * ind.variables[0]) * std::pow(std::sin(6.0 * M_PI * ind.variables[0]), 6.0);
         double sum = 0.0;
@@ -200,9 +200,9 @@ std::vector<Individual> generate_offspring(const std::vector<Individual>& popula
 
         int r1, r2, r3;
 
-        // --- HYBRYDOWA STRATEGIA ---
-        // 90% czasu: Hole Filler (Elita + Tlok) -> Gladki front, szybka zbieznosc
-        // 10% czasu: Random DE -> Ucieczka z lokalnych optimow (kluczowe dla ZDT4)
+        // HYBRYDOWA STRATEGIA
+        // 90% czasu: Hole Filler (Elita + Tlok) -> szybka zbieznosc
+        // 10% czasu: Random DE -> Ucieczka z lokalnych optimow (szczegolnie wazne dla ZDT4)
         if (dis(gen) < 0.9) {
             // Hole Filler Strategy
             r1 = crowded_tournament_selection(population);
