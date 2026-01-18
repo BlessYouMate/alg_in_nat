@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import glob
 import os
 
-
 def plot_benchmark_results():
     # Znajdź wszystkie pliki z wynikami
     files = glob.glob("*_results.csv")
@@ -39,7 +38,8 @@ def plot_benchmark_results():
         try:
             data = pd.read_csv(file)
 
-            plt.figure(figsize=(10, 8))
+            # Zwiększyłem nieco szerokość figury, żeby legenda ładnie wyglądała obok
+            plt.figure(figsize=(11, 8))
 
             # Grupujemy po generacjach
             for gen in [20, 50, 100, 500]:
@@ -60,7 +60,17 @@ def plot_benchmark_results():
             plt.xlabel('$f_1(x)$')
             plt.ylabel('$f_2(x)$')
             plt.grid(True, linestyle='--', alpha=0.5)
-            plt.legend()
+            
+            # --- ZMIANA: LEGENDA POZA WYKRESEM ---
+            # bbox_to_anchor=(1.05, 1) -> przesunięcie w prawo o 5% szerokości wykresu
+            # loc='upper left' -> lewy górny róg legendy styka się z tym punktem
+            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+            # -------------------------------------
+
+            # --- WAŻNE: DOPASOWANIE UKŁADU ---
+            # Bez tego legenda zostałaby ucięta przy zapisie do pliku!
+            plt.tight_layout()
+            # ---------------------------------
 
             # Zapisz jako PNG
             output_file = title_name + "_plot.png"
@@ -69,7 +79,6 @@ def plot_benchmark_results():
 
         except Exception as e:
             print(f"Błąd przy pliku {file}: {e}")
-
 
 if __name__ == "__main__":
     plot_benchmark_results()
